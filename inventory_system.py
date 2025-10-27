@@ -1,61 +1,100 @@
+"""
+A simple inventory management system.
+
+This module allows adding, removing, and querying items in an inventory,
+as well as loading from and saving to a JSON file.
+"""
+
 import json
-import logging
 from datetime import datetime
 
-# Global variable
-stock_data = {}
 
-def addItem(item="default", qty=0, logs=[]):
+def add_item(stock, item="default", qty=0, logs=None):
+    """Add a specified quantity of an item to the stock."""
+    if logs is None:
+        logs = []
+
+    if not isinstance(qty, (int, float)):
+        print(f"Error: Quantity '{qty}' for item '{item}' is not valid.")
+        print("Skipping item.")
+        return
+
     if not item:
         return
-    stock_data[item] = stock_data.get(item, 0) + qty
-    logs.append("%s: Added %d of %s" % (str(datetime.now()), qty, item))
+    stock[item] = stock.get(item, 0) + qty
+    logs.append(f"{datetime.now()}: Added {qty} of {item}")
 
-def removeItem(item, qty):
+
+def remove_item(stock, item, qty):
+    """Remove a specified quantity of an item from the stock."""
     try:
-        stock_data[item] -= qty
-        if stock_data[item] <= 0:
-            del stock_data[item]
-    except:
-        pass
+        stock[item] -= qty
+        if stock[item] <= 0:
+            del stock[item]
+    except KeyError:
+        print(f"Error removing item: '{item}' not found in stock")
 
-def getQty(item):
-    return stock_data[item]
 
-def loadData(file="inventory.json"):
-    f = open(file, "r")
-    global stock_data
-    stock_data = json.loads(f.read())
-    f.close()
+def get_qty(stock, item):
+    """Get the current quantity of a specific item."""
+    return stock[item]
 
-def saveData(file="inventory.json"):
-    f = open(file, "w")
-    f.write(json.dumps(stock_data))
-    f.close()
 
-def printData():
+def load_data(file="inventory.json"):
+    """Load inventory data from a JSON file and return it."""
+    try:
+        with open(file, "r", encoding="utf-8") as f:
+            return json.loads(f.read())
+    except FileNotFoundError:
+        print(f"Warning: {file} not found. Starting with an empty inventory.")
+        return {}
+    except json.JSONDecodeError:
+        print(f"Error: Could not decode {file}.")
+        print("Starting with an empty inventory.")
+        return {}
+
+
+def save_data(data_to_save, file="inventory.json"):
+    """Save the provided inventory data to a JSON file."""
+    with open(file, "w", encoding="utf-8") as f:
+        f.write(json.dumps(data_to_save))
+
+
+def print_data(stock):
+    """Print a report of all items in stock."""
     print("Items Report")
-    for i in stock_data:
-        print(i, "->", stock_data[i])
+    for item, qty in stock.items():
+        print(f"{item} -> {qty}")
 
-def checkLowItems(threshold=5):
+
+def check_low_items(stock, threshold=5):
+    """Return a list of items with stock below the threshold."""
     result = []
-    for i in stock_data:
-        if stock_data[i] < threshold:
-            result.append(i)
+    for item, qty in stock.items():
+        if qty < threshold:
+            result.append(item)
     return result
 
-def main():
-    addItem("apple", 10)
-    addItem("banana", -2)
-    addItem(123, "ten")  # invalid types, no check
-    removeItem("apple", 3)
-    removeItem("orange", 1)
-    print("Apple stock:", getQty("apple"))
-    print("Low items:", checkLowItems())
-    saveData()
-    loadData()
-    printData()
-    eval("print('eval used')")  # dangerous
 
-main()
+def main():
+    """Main function to run the inventory operations."""
+    stock = load_data()  # Initialize local stock from file
+
+    add_item(stock, "apple", 10)
+    add_item(stock, "banana", -2)
+    add_item(stock, 123, "ten")
+    remove_item(stock, "apple", 3)
+    remove_item(stock, "orange", 1)
+
+    try:
+        print("Apple stock:", get_qty(stock, "apple"))
+    except KeyError:
+        print("Apple stock: 0")
+
+    print("Low items:", check_low_items(stock))
+    save_data(stock)
+    print_data(stock)
+
+
+if __name__ == "__main__":
+    main()
